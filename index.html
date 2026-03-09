@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>人名抽奖 / 班级点名系统</title>
+
+  <!-- Excel 解析库 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #f8f9ff 0%, #eef2fb 100%);
+      color: #222;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 24px auto;
+      padding: 16px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      background: #fff;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(31, 46, 91, 0.12);
+    }
+
+    .left {
+      background: linear-gradient(180deg, #ffb5c0 0%, #ff8fa2 100%);
+      padding: 26px 24px 24px;
+      color: #fff;
+      min-height: 760px;
+      position: relative;
+    }
+
+    .right {
+      background: #fff;
+      padding: 24px 20px;
+      min-height: 760px;
+    }
+
+    .main-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .sub-title {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.95;
+      margin-bottom: 18px;
+    }
+
+    .mode-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .mode-btn.active {
+      background: #fff;
+      color: #ff5c78;
+      box-shadow: 0 8px 20px rgba(255,255,255,0.25);
+    }
+
+    .mode-btn.inactive {
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.28);
+    }
+
+    .machine-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 4px;
+    }
+
+    .machine {
+      width: 390px;
+      max-width: 100%;
+      background: rgba(255,255,255,0.18);
+      border-radius: 28px;
+      padding: 18px 18px 24px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+      backdrop-filter: blur(6px);
+    }
+
+    .machine-title {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      opacity: 0.98;
+    }
+
+    .balls-box {
+      height: 220px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.26);
+      box-shadow: inset 0 10px 24px rgba(255,255,255,0.08);
+    }
+
+    .balls {
+      position: absolute;
+      inset: 0;
+    }
+
+    .ball {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.95);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+      user-select: none;
+    }
+
+    .ball-1 { background: #ff7f7f; }
+    .ball-2 { background: #7ec8ff; }
+    .ball-3 { background: #ffd36e; }
+    .ball-4 { background: #83d88d; }
+    .ball-5 { background: #b98cff; }
+    .ball-6 { background: #ff9fd2; }
+
+    .winner-area {
+      margin-top: 16px;
+      background: rgba(255,255,255,0.16);
+      border-radius: 20px;
+      padding: 18px 14px;
+      text-align: center;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .winner-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+      opacity: 0.95;
+    }
+
+    .winner-name {
+      font-size: 38px;
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
+      text-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    }
+
+    .winner-tip {
+      margin-top: 8px;
+      font-size: 13px;
+      opacity: 0.92;
+    }
+
+    .machine-foot {
+      width: 120px;
+      height: 18px;
+      background: rgba(255,255,255,0.92);
+      margin: 18px auto 0;
+      border-radius: 12px;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.1);
+    }
+
+    .machine-handle {
+      width: 28px;
+      height: 62px;
+      background: #6993ff;
+      border-radius: 20px;
+      margin: 10px auto 0;
+      position: relative;
+      box-shadow: 0 6px 16px rgba(63, 87, 174, 0.25);
+    }
+
+    .machine-handle::before {
+      content: "";
+      position: absolute;
+      width: 58px;
+      height: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      top: -8px;
+      background: #87a7ff;
+      border-radius: 20px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .primary-btn, .ghost-btn, .danger-btn, .small-btn {
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    .primary-btn {
+      background: #fff;
+      color: #ff5b77;
+      padding: 12px 24px;
+      font-size: 15px;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(255,255,255,0.28);
+    }
+
+    .ghost-btn {
+      background: rgba(255,255,255,0.16);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.34);
+      padding: 12px 20px;
+      font-size: 15px;
+    }
+
+    .ghost-btn:hover {
+      background: rgba(255,255,255,0.24);
+    }
+
+    .danger-btn {
+      background: #fff1f3;
+      color: #df4763;
+      padding: 10px 18px;
+      font-size: 14px;
+    }
+
+    .danger-btn:hover {
+      background: #ffe8ed;
+    }
+
+    .stats-box {
+      margin-top: 22px;
+      background: rgba(255,255,255,0.14);
+      border-radius: 20px;
+      padding: 16px 18px;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .stats-box strong {
+      color: #fff;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #222;
+    }
+
+    .section-desc {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 14px;
+      line-height: 1.7;
+    }
+
+    .tool-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .light-btn {
+      background: #fff;
+      color: #555;
+      border: 1px solid #e6e9f2;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .light-btn:hover {
+      background: #f9fbff;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 110px;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      border: 1px solid #e4e8f1;
+      border-radius: 14px;
+      padding: 11px 12px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #8aa7ff;
+      box-shadow: 0 0 0 3px rgba(138,167,255,0.12);
+    }
+
+    .textarea-wrap {
+      margin-bottom: 14px;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+      line-height: 1.7;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #8a8f9d;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .panel-card {
+      background: #fafbff;
+      border: 1px solid #edf0f7;
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panel-subtitle {
+      font-size: 15px;
+      font-weight: 800;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .summary-item {
+      background: #fff;
+      border: 1px solid #edf0f7;
+      border-radius: 16px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .summary-num {
+      font-size: 22px;
+      font-weight: 900;
+      color: #ff5d79;
+      margin-bottom: 4px;
+    }
+
+    .summary-label {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .list {
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .person-item {
+      display: grid;
+      grid-template-columns: 1fr 110px 110px 90px;
+      gap: 10px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid #edf0f7;
+      border-radius: 14px;
+      padding: 12px 10px;
+      margin-bottom: 10px;
+    }
+
+    .person-main {
+      min-width: 0;
+    }
+
+    .person-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .person-prob {
+      font-size: 12px;
+      color: #7a8090;
+    }
+
+    .small-btn {
+      padding: 9px 0;
+      border-radius: 10px;
+      background: #fff1f3;
+      color: #dd4763;
+      font-size: 13px;
+    }
+
+    .small-btn:hover {
+      background: #ffe7ec;
+    }
+
+    .history-box, .picked-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid #e9edf6;
+      font-size: 13px;
+      color: #555;
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .empty {
+      text-align: center;
+      color: #999;
+      padding: 24px 10px;
+      font-size: 14px;
+    }
+
+    .rolling-glow {
+      animation: rollingGlow 0.12s infinite alternate;
+    }
+
+    @keyframes rollingGlow {
+      from {
+        transform: scale(1);
+        opacity: 0.92;
+      }
+      to {
+        transform: scale(1.035);
+        opacity: 1;
+      }
+    }
+
+    @keyframes float1 {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(12px, -10px); }
+      50% { transform: translate(4px, 14px); }
+      75% { transform: translate(-10px, -5px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @keyframes float2 {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(-10px, 10px); }
+      50% { transform: translate(10px, -8px); }
+      75% { transform: translate(-6px, -12px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    .ball.anim1 { animation: float1 2s ease-in-out infinite; }
+    .ball.anim2 { animation: float2 2.4s ease-in-out infinite; }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .left, .right {
+        min-height: auto;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .person-item {
+        grid-template-columns: 1fr;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="app">
+      <div class="left">
+        <div class="main-title">抽奖 / 班级点名系统</div>
+        <div class="sub-title">默认自动移除中奖者，不重复抽中，支持 Excel 导入与千人名单</div>
+
+        <div class="mode-bar">
+          <button id="lotteryModeBtn" class="mode-btn active">抽奖模式</button>
+          <button id="rollCallModeBtn" class="mode-btn inactive">班级点名模式</button>
+        </div>
+
+        <div class="machine-wrap">
+          <div class="machine">
+            <div class="machine-title" id="machineTitle">幸运抽取中</div>
+
+            <div class="balls-box">
+              <div class="balls" id="ballsContainer"></div>
+            </div>
+
+            <div class="winner-area">
+              <div class="winner-label" id="winnerLabel">当前结果</div>
+              <div class="winner-name" id="winnerName">点击开始</div>
+              <div class="winner-tip" id="winnerTip">默认抽中后自动移除，不会重复抽到</div>
+            </div>
+
+            <div class="machine-foot"></div>
+            <div class="machine-handle"></div>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <button class="primary-btn" id="startBtn">开始</button>
+          <button class="ghost-btn" id="stopBtn">停止</button>
+          <button class="ghost-btn" id="resetResultBtn">清空本轮结果</button>
+        </div>
+
+        <div class="control-row">
+          <button class="ghost-btn" id="restorePoolBtn">恢复全部名单</button>
+          <button class="ghost-btn" id="shuffleBtn">打乱名单顺序</button>
+        </div>
+
+        <div class="stats-box">
+          <div><strong>当前模式：</strong><span id="modeText">抽奖模式</span></div>
+          <div><strong>剩余待抽：</strong><span id="remainCountText">0</span></div>
+          <div><strong>已抽出人数：</strong><span id="pickedCountText">0</span></div>
+          <div><strong>总人数：</strong><span id="totalCountText">0</span></div>
+          <div><strong>说明：</strong>抽奖模式按权重抽取，班级点名模式默认等概率随机点名。</div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="section-title">名单管理</div>
+        <div class="section-desc">
+          你可以手动输入，也可以一键导入 Excel。Excel 推荐格式为两列，第一列姓名，第二列权重。<br>
+          例如：张三 1，李四 3。若没有权重，则默认按 1 处理。
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-subtitle">快速导入</div>
+          <div class="tool-row">
+            <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" />
+            <button class="light-btn" id="downloadTemplateBtn">查看导入格式说明</button>
+          </div>
+          <div class="hint">
+            Excel 示例列名可写成：姓名 / 名字 / 人名 / name。<br>
+            权重列可写成：权重 / 概率 / weight。<br>
+            只有姓名也可以导入，系统会默认权重为 1。
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-subtitle">手动添加</div>
+          <div class="input-row">
+            <input id="nameInput" type="text" placeholder="输入姓名，比如 张三" />
+            <input id="weightInput" type="number" min="1" value="1" placeholder="权重" />
+            <button class="light-btn" id="addBtn">添加</button>
+          </div>
+
+          <div class="textarea-wrap">
+            <textarea id="batchInput" placeholder="支持批量粘贴，每行一个名字，也可以写成：张三,2 或 李四，3"></textarea>
+            <div class="tool-row">
+              <button class="light-btn" id="batchAddBtn">批量添加</button>
+              <button class="light-btn" id="demoBtn">导入示例名单</button>
+              <button class="danger-btn" id="clearAllBtn">清空全部名单</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-num" id="summaryTotal">0</div>
+            <div class="summary-label">总人数</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-num" id="summaryRemain">0</div>
+            <div class="summary-label">剩余待抽</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-num" id="summaryPicked">0</div>
+            <div class="summary-label">已抽出</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-num" id="summaryWeight">0</div>
+            <div class="summary-label">总权重</div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-subtitle">当前待抽名单</div>
+          <div class="list" id="personList"></div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-subtitle">已抽出名单</div>
+          <div class="picked-box" id="pickedList"></div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-subtitle">最近结果记录</div>
+          <div class="history-box" id="historyList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "advanced_lottery_people_v2";
+    const STORAGE_PICKED_KEY = "advanced_lottery_picked_v2";
+    const STORAGE_HISTORY_KEY = "advanced_lottery_history_v2";
+    const STORAGE_MODE_KEY = "advanced_lottery_mode_v2";
+
+    const winnerNameEl = document.getElementById("winnerName");
+    const winnerLabelEl = document.getElementById("winnerLabel");
+    const winnerTipEl = document.getElementById("winnerTip");
+    const machineTitleEl = document.getElementById("machineTitle");
+    const personListEl = document.getElementById("personList");
+    const pickedListEl = document.getElementById("pickedList");
+    const historyListEl = document.getElementById("historyList");
+    const ballsContainerEl = document.getElementById("ballsContainer");
+
+    const nameInputEl = document.getElementById("nameInput");
+    const weightInputEl = document.getElementById("weightInput");
+    const batchInputEl = document.getElementById("batchInput");
+    const excelFileEl = document.getElementById("excelFile");
+
+    const addBtn = document.getElementById("addBtn");
+    const batchAddBtn = document.getElementById("batchAddBtn");
+    const demoBtn = document.getElementById("demoBtn");
+    const clearAllBtn = document.getElementById("clearAllBtn");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const restorePoolBtn = document.getElementById("restorePoolBtn");
+    const resetResultBtn = document.getElementById("resetResultBtn");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const downloadTemplateBtn = document.getElementById("downloadTemplateBtn");
+
+    const lotteryModeBtn = document.getElementById("lotteryModeBtn");
+    const rollCallModeBtn = document.getElementById("rollCallModeBtn");
+
+    const summaryTotalEl = document.getElementById("summaryTotal");
+    const summaryRemainEl = document.getElementById("summaryRemain");
+    const summaryPickedEl = document.getElementById("summaryPicked");
+    const summaryWeightEl = document.getElementById("summaryWeight");
+
+    const remainCountTextEl = document.getElementById("remainCountText");
+    const pickedCountTextEl = document.getElementById("pickedCountText");
+    const totalCountTextEl = document.getElementById("totalCountText");
+    const modeTextEl = document.getElementById("modeText");
+
+    let people = [];
+    let pickedPeople = [];
+    let history = [];
+    let currentMode = "lottery"; // lottery / rollcall
+
+    let isRolling = false;
+    let rollingTimer = null;
+    let currentRollingIndex = 0;
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(people));
+      localStorage.setItem(STORAGE_PICKED_KEY, JSON.stringify(pickedPeople));
+      localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(history));
+      localStorage.setItem(STORAGE_MODE_KEY, currentMode);
+    }
+
+    function loadData() {
+      try {
+        const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        const picked = JSON.parse(localStorage.getItem(STORAGE_PICKED_KEY) || "[]");
+        const h = JSON.parse(localStorage.getItem(STORAGE_HISTORY_KEY) || "[]");
+        const mode = localStorage.getItem(STORAGE_MODE_KEY);
+
+        if (Array.isArray(p)) people = p;
+        if (Array.isArray(picked)) pickedPeople = picked;
+        if (Array.isArray(h)) history = h;
+        if (mode === "lottery" || mode === "rollcall") currentMode = mode;
+      } catch (e) {
+        people = [];
+        pickedPeople = [];
+        history = [];
+        currentMode = "lottery";
+      }
+    }
+
+    function updateModeUI() {
+      if (currentMode === "lottery") {
+        lotteryModeBtn.className = "mode-btn active";
+        rollCallModeBtn.className = "mode-btn inactive";
+        machineTitleEl.textContent = "幸运抽取中";
+        winnerLabelEl.textContent = "当前中奖";
+        winnerTipEl.textContent = "按权重抽取，抽中后自动移除";
+        modeTextEl.textContent = "抽奖模式";
+      } else {
+        lotteryModeBtn.className = "mode-btn inactive";
+        rollCallModeBtn.className = "mode-btn active";
+        machineTitleEl.textContent = "随机点名中";
+        winnerLabelEl.textContent = "当前点到";
+        winnerTipEl.textContent = "班级随机点名，点到后自动移除";
+        modeTextEl.textContent = "班级点名模式";
+      }
+      saveData();
+    }
+
+    function getTotalWeight() {
+      return people.reduce((sum, item) => sum + Number(item.weight || 1), 0);
+    }
+
+    function getProbability(weight) {
+      const total = getTotalWeight();
+      if (!total) return "0.00%";
+      if (currentMode === "rollcall") {
+        return (100 / people.length).toFixed(2) + "%";
+      }
+      return ((Number(weight || 1) / total) * 100).toFixed(2) + "%";
+    }
+
+    function updateSummary() {
+      const total = people.length + pickedPeople.length;
+      summaryTotalEl.textContent = total;
+      summaryRemainEl.textContent = people.length;
+      summaryPickedEl.textContent = pickedPeople.length;
+      summaryWeightEl.textContent = getTotalWeight();
+
+      remainCountTextEl.textContent = people.length;
+      pickedCountTextEl.textContent = pickedPeople.length;
+      totalCountTextEl.textContent = total;
+    }
+
+    function renderPeople() {
+      if (!people.length) {
+        personListEl.innerHTML = `<div class="empty">暂无待抽名单</div>`;
+        return;
+      }
+
+      personListEl.innerHTML = people.map(item => {
+        return `
+          <div class="person-item">
+            <div class="person-main">
+              <div class="person-name">${escapeHtml(item.name)}</div>
+              <div class="person-prob">当前概率：${getProbability(item.weight)}</div>
+            </div>
+            <input type="number" min="1" value="${item.weight}" onchange="updateWeight(${item.id}, this.value)" />
+            <input type="text" value="${escapeHtml(item.name)}" onchange="updateName(${item.id}, this.value)" />
+            <button class="small-btn" onclick="removePendingPerson(${item.id})">删除</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderPickedPeople() {
+      if (!pickedPeople.length) {
+        pickedListEl.innerHTML = `<div class="empty">还没有抽出任何人</div>`;
+        return;
+      }
+
+      pickedListEl.innerHTML = pickedPeople
+        .slice()
+        .reverse()
+        .map(item => `<span class="tag">${escapeHtml(item.name)}</span>`)
+        .join("");
+    }
+
+    function renderHistory() {
+      if (!history.length) {
+        historyListEl.innerHTML = `<div class="empty">暂无记录</div>`;
+        return;
+      }
+
+      historyListEl.innerHTML = history
+        .slice()
+        .reverse()
+        .map(item => `<span class="tag">${escapeHtml(item)}</span>`)
+        .join("");
+    }
+
+    function renderBalls() {
+      const count = Math.min(people.length, 30);
+      if (!count) {
+        ballsContainerEl.innerHTML = "";
+        return;
+      }
+
+      const balls = [];
+      for (let i = 0; i < count; i++) {
+        const left = Math.random() * 82 + 5;
+        const top = Math.random() * 72 + 8;
+        const colorClass = `ball-${(i % 6) + 1}`;
+        const animClass = i % 2 === 0 ? "anim1" : "anim2";
+        const text = people[i].name.length > 2 ? people[i].name.slice(0, 2) : people[i].name;
+        balls.push(`
+          <div class="ball ${colorClass} ${animClass}" style="left:${left}%; top:${top}%;">
+            ${escapeHtml(text)}
+          </div>
+        `);
+      }
+
+      ballsContainerEl.innerHTML = balls.join("");
+    }
+
+    function renderAll() {
+      renderPeople();
+      renderPickedPeople();
+      renderHistory();
+      renderBalls();
+      updateSummary();
+      updateModeUI();
+    }
+
+    function normalizeWeight(value) {
+      const num = Number(value);
+      if (!num || num < 1) return 1;
+      return Math.floor(num);
+    }
+
+    function addPerson(name, weight = 1) {
+      const n = String(name || "").trim();
+      if (!n) return false;
+
+      if (people.length + pickedPeople.length >= 1000) {
+        alert("最多支持 1000 人");
+        return false;
+      }
+
+      people.push({
+        id: Date.now() + Math.floor(Math.random() * 100000),
+        name: n,
+        weight: normalizeWeight(weight)
+      });
+      return true;
+    }
+
+    function handleAddOne() {
+      const name = nameInputEl.value.trim();
+      const weight = normalizeWeight(weightInputEl.value);
+
+      if (!name) {
+        alert("请输入姓名");
+        return;
+      }
+
+      const ok = addPerson(name, weight);
+      if (!ok) return;
+
+      nameInputEl.value = "";
+      weightInputEl.value = "1";
+
+      saveData();
+      renderAll();
+    }
+
+    function parseBatchLine(line) {
+      const text = line.trim();
+      if (!text) return null;
+
+      const parts = text.split(/[,，\s]+/).filter(Boolean);
+      if (!parts.length) return null;
+
+      const name = parts[0];
+      let weight = 1;
+
+      if (parts[1] && !isNaN(Number(parts[1]))) {
+        weight = normalizeWeight(parts[1]);
+      }
+
+      return { name, weight };
+    }
+
+    function handleBatchAdd() {
+      const raw = batchInputEl.value.trim();
+      if (!raw) {
+        alert("请先输入批量名单");
+        return;
+      }
+
+      const lines = raw.split(/\n+/);
+      let added = 0;
+
+      for (const line of lines) {
+        const row = parseBatchLine(line);
+        if (!row) continue;
+        const ok = addPerson(row.name, row.weight);
+        if (ok) added++;
+      }
+
+      batchInputEl.value = "";
+      saveData();
+      renderAll();
+      alert(`已添加 ${added} 人`);
+    }
+
+    function updateWeight(id, value) {
+      const target = people.find(item => item.id === id);
+      if (!target) return;
+      target.weight = normalizeWeight(value);
+      saveData();
+      renderAll();
+    }
+
+    function updateName(id, value) {
+      const target = people.find(item => item.id === id);
+      if (!target) return;
+
+      const newName = String(value || "").trim();
+      if (!newName) {
+        alert("姓名不能为空");
+        renderAll();
+        return;
+      }
+
+      target.name = newName;
+      saveData();
+      renderAll();
+    }
+
+    function removePendingPerson(id) {
+      people = people.filter(item => item.id !== id);
+      saveData();
+      renderAll();
+    }
+
+    function pickByWeight() {
+      const totalWeight = getTotalWeight();
+      if (!people.length || totalWeight <= 0) return null;
+
+      let random = Math.random() * totalWeight;
+      for (const person of people) {
+        random -= Number(person.weight || 1);
+        if (random < 0) {
+          return person;
+        }
+      }
+      return people[people.length - 1];
+    }
+
+    function pickForRollCall() {
+      if (!people.length) return null;
+      const index = Math.floor(Math.random() * people.length);
+      return people[index];
+    }
+
+    function pickOne() {
+      if (currentMode === "rollcall") {
+        return pickForRollCall();
+      }
+      return pickByWeight();
+    }
+
+    function startRolling() {
+      if (!people.length) {
+        winnerNameEl.textContent = "全部抽完了";
+        alert("当前没有可抽取的人，请先恢复名单或重新导入");
+        return;
+      }
+
+      if (isRolling) return;
+      isRolling = true;
+      winnerNameEl.classList.add("rolling-glow");
+
+      let localIndex = 0;
+      rollingTimer = setInterval(() => {
+        if (!people.length) return;
+        localIndex = (localIndex + 1) % people.length;
+        currentRollingIndex = localIndex;
+        winnerNameEl.textContent = people[localIndex].name;
+      }, 70);
+    }
+
+    function stopRolling() {
+      if (!isRolling) return;
+
+      clearInterval(rollingTimer);
+      rollingTimer = null;
+      isRolling = false;
+      winnerNameEl.classList.remove("rolling-glow");
+
+      const winner = pickOne();
+      if (!winner) {
+        winnerNameEl.textContent = "全部抽完了";
+        return;
+      }
+
+      winnerNameEl.textContent = winner.name;
+      history.push(winner.name);
+      if (history.length > 100) {
+        history = history.slice(-100);
+      }
+
+      // 自动移除中奖者
+      people = people.filter(item => item.id !== winner.id);
+      pickedPeople.push(winner);
+
+      saveData();
+      renderAll();
+    }
+
+    function restoreAllPicked() {
+      if (!pickedPeople.length) {
+        alert("没有已抽出的人可以恢复");
+        return;
+      }
+
+      people = people.concat(pickedPeople);
+      pickedPeople = [];
+
+      saveData();
+      renderAll();
+      winnerNameEl.textContent = "已恢复全部名单";
+    }
+
+    function clearCurrentResult() {
+      winnerNameEl.textContent = "点击开始";
+      history = [];
+      saveData();
+      renderAll();
+    }
+
+    function clearAllData() {
+      const ok = confirm("确定清空全部名单和记录吗？");
+      if (!ok) return;
+
+      if (isRolling) {
+        clearInterval(rollingTimer);
+        rollingTimer = null;
+        isRolling = false;
+      }
+
+      people = [];
+      pickedPeople = [];
+      history = [];
+      winnerNameEl.textContent = "点击开始";
+
+      saveData();
+      renderAll();
+    }
+
+    function shufflePeople() {
+      for (let i = people.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [people[i], people[j]] = [people[j], people[i]];
+      }
+      saveData();
+      renderAll();
+    }
+
+    function loadDemoData() {
+      people = [];
+      pickedPeople = [];
+      history = [];
+
+      const demo = [
+        ["张三", 1], ["李四", 2], ["王五", 1], ["赵六", 3], ["陈晨", 1],
+        ["刘洋", 1], ["周宁", 2], ["吴悠", 1], ["郑欣", 1], ["孙浩", 2],
+        ["许萌", 1], ["冯哲", 1]
+      ];
+
+      for (const row of demo) {
+        addPerson(row[0], row[1]);
+      }
+
+      saveData();
+      renderAll();
+      winnerNameEl.textContent = "已载入示例名单";
+    }
+
+    function importExcel(file) {
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          if (!json.length) {
+            alert("Excel 内容为空");
+            return;
+          }
+
+          let rows = json.filter(row => Array.isArray(row) && row.some(cell => String(cell || "").trim() !== ""));
+          if (!rows.length) {
+            alert("Excel 内容为空");
+            return;
+          }
+
+          const firstRow = rows[0].map(item => String(item || "").trim().toLowerCase());
+
+          const possibleNameHeaders = ["姓名", "名字", "人名", "name"];
+          const possibleWeightHeaders = ["权重", "概率", "weight"];
+
+          let nameIndex = -1;
+          let weightIndex = -1;
+          let startRow = 0;
+
+          for (let i = 0; i < firstRow.length; i++) {
+            if (possibleNameHeaders.includes(firstRow[i])) nameIndex = i;
+            if (possibleWeightHeaders.includes(firstRow[i])) weightIndex = i;
+          }
+
+          if (nameIndex !== -1) {
+            startRow = 1;
+          } else {
+            nameIndex = 0;
+            if (firstRow.length > 1 && !isNaN(Number(rows[0][1]))) {
+              weightIndex = 1;
+            }
+          }
+
+          let added = 0;
+
+          for (let i = startRow; i < rows.length; i++) {
+            const row = rows[i];
+            const name = row[nameIndex];
+            const weight = weightIndex !== -1 ? row[weightIndex] : 1;
+            if (!String(name || "").trim()) continue;
+
+            const ok = addPerson(String(name).trim(), normalizeWeight(weight));
+            if (ok) added++;
+          }
+
+          saveData();
+          renderAll();
+          alert(`Excel 导入成功，新增 ${added} 人`);
+        } catch (err) {
+          console.error(err);
+          alert("Excel 导入失败，请检查文件格式");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function showTemplateGuide() {
+      alert(
+`Excel 导入示例
+
+方式一：只有姓名
+姓名
+张三
+李四
+王五
+
+方式二：姓名 + 权重
+姓名    权重
+张三    1
+李四    3
+王五    2
+
+也支持没有表头，直接两列
+张三    1
+李四    2
+王五    1`
+      );
+    }
+
+    addBtn.addEventListener("click", handleAddOne);
+    batchAddBtn.addEventListener("click", handleBatchAdd);
+    demoBtn.addEventListener("click", loadDemoData);
+    clearAllBtn.addEventListener("click", clearAllData);
+    startBtn.addEventListener("click", startRolling);
+    stopBtn.addEventListener("click", stopRolling);
+    restorePoolBtn.addEventListener("click", restoreAllPicked);
+    resetResultBtn.addEventListener("click", clearCurrentResult);
+    shuffleBtn.addEventListener("click", shufflePeople);
+    downloadTemplateBtn.addEventListener("click", showTemplateGuide);
+
+    lotteryModeBtn.addEventListener("click", () => {
+      currentMode = "lottery";
+      saveData();
+      renderAll();
+    });
+
+    rollCallModeBtn.addEventListener("click", () => {
+      currentMode = "rollcall";
+      saveData();
+      renderAll();
+    });
+
+    excelFileEl.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      importExcel(file);
+      e.target.value = "";
+    });
+
+    nameInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleAddOne();
+    });
+
+    weightInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleAddOne();
+    });
+
+    batchInputEl.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        handleBatchAdd();
+      }
+    });
+
+    window.updateWeight = updateWeight;
+    window.updateName = updateName;
+    window.removePendingPerson = removePendingPerson;
+
+    loadData();
+    renderAll();
+
+    if (!people.length && !pickedPeople.length) {
+      loadDemoData();
+    }
+  </script>
+</body>
+</html>
