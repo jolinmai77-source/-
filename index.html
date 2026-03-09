@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>人名抽奖 / 班级点名系统</title>
+  <title>抽奖 / 你比我猜</title>
 
   <!-- Excel 解析库 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -539,12 +539,12 @@
   <div class="page">
     <div class="app">
       <div class="left">
-        <div class="main-title">抽奖 / 班级点名系统</div>
+        <div class="main-title">抽奖 / 你比我猜</div>
         <div class="sub-title">默认自动移除中奖者，不重复抽中，支持 Excel 导入与千人名单</div>
 
         <div class="mode-bar">
           <button id="lotteryModeBtn" class="mode-btn active">抽奖模式</button>
-          <button id="rollCallModeBtn" class="mode-btn inactive">班级点名模式</button>
+          <button id="rollCallModeBtn" class="mode-btn inactive">你比我猜</button>
         </div>
 
         <div class="machine-wrap">
@@ -582,7 +582,7 @@
           <div><strong>剩余待抽：</strong><span id="remainCountText">0</span></div>
           <div><strong>已抽出人数：</strong><span id="pickedCountText">0</span></div>
           <div><strong>总人数：</strong><span id="totalCountText">0</span></div>
-          <div><strong>说明：</strong>抽奖模式按权重抽取，班级点名模式默认等概率随机点名。</div>
+          <div><strong>说明：</strong>抽奖模式按权重抽取，你比我猜默认等概率随机点名。</div>
         </div>
       </div>
 
@@ -750,23 +750,23 @@
     }
 
     function updateModeUI() {
-      if (currentMode === "lottery") {
-        lotteryModeBtn.className = "mode-btn active";
-        rollCallModeBtn.className = "mode-btn inactive";
-        machineTitleEl.textContent = "幸运抽取中";
-        winnerLabelEl.textContent = "当前中奖";
-        winnerTipEl.textContent = "按权重抽取，抽中后自动移除";
-        modeTextEl.textContent = "抽奖模式";
-      } else {
-        lotteryModeBtn.className = "mode-btn inactive";
-        rollCallModeBtn.className = "mode-btn active";
-        machineTitleEl.textContent = "随机点名中";
-        winnerLabelEl.textContent = "当前点到";
-        winnerTipEl.textContent = "班级随机点名，点到后自动移除";
-        modeTextEl.textContent = "班级点名模式";
-      }
-      saveData();
-    }
+  if (currentMode === "lottery") {
+    lotteryModeBtn.className = "mode-btn active";
+    rollCallModeBtn.className = "mode-btn inactive";
+    machineTitleEl.textContent = "幸运抽取中";
+    winnerLabelEl.textContent = "当前中奖";
+    winnerTipEl.textContent = "按权重抽取，抽中后自动移除";
+    modeTextEl.textContent = "抽奖模式";
+  } else {
+    lotteryModeBtn.className = "mode-btn inactive";
+    rollCallModeBtn.className = "mode-btn active";
+    machineTitleEl.textContent = "随机抽取中";
+    winnerLabelEl.textContent = "当前抽到";
+    winnerTipEl.textContent = "你比我猜，点到后自动移除";
+    modeTextEl.textContent = "你比我猜";
+  }
+  saveData();
+}
 
     function getTotalWeight() {
       return people.reduce((sum, item) => sum + Number(item.weight || 1), 0);
@@ -855,10 +855,9 @@
         const animClass = i % 2 === 0 ? "anim1" : "anim2";
         const text = people[i].name.length > 2 ? people[i].name.slice(0, 2) : people[i].name;
         balls.push(`
-          <div class="ball ${colorClass} ${animClass}" style="left:${left}%; top:${top}%;">
-            ${escapeHtml(text)}
-          </div>
-        `);
+  <div class="ball ${colorClass} ${animClass}" style="left:${left}%; top:${top}%;">
+  </div>
+`);
       }
 
       ballsContainerEl.innerHTML = balls.join("");
@@ -1275,4 +1274,5 @@
 </body>
 
 </html>
+
 
